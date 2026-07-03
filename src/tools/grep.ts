@@ -24,7 +24,11 @@ export const grepTool: ToolDefinition = {
     },
     required: ['pattern'],
   },
-  requiresApproval: false,
+
+  needsApproval(args: Record<string, unknown>): boolean {
+    // Absolute file globs can look outside the workspace; relative ones cannot.
+    return typeof args['glob'] === 'string' && isAbsolute(args['glob']);
+  },
 
   summarize(args: Record<string, unknown>): string {
     const pattern = typeof args['pattern'] === 'string' ? args['pattern'] : '(invalid pattern)';

@@ -5,8 +5,6 @@ export interface DenpiConfig {
   baseUrl: string;
   /** Model name to request; llama-server serves whatever it loaded, so this is mostly cosmetic. */
   model: string;
-  /** Skip approval prompts for shell / file-mutation tools. */
-  autoApprove: boolean;
   /** When true (default), file tools may not leave the workspace. */
   sandbox: boolean;
   /** Extra text appended to the built-in system prompt. */
@@ -21,7 +19,6 @@ export function loadConfig(argv: string[]): DenpiConfig {
   const config: DenpiConfig = {
     baseUrl: process.env['DENPI_URL'] ?? DEFAULT_BASE_URL,
     model: process.env['DENPI_MODEL'] ?? loadSettings().model ?? 'default',
-    autoApprove: false,
     sandbox: true,
     extraSystemPrompt: null,
     cwd: process.cwd(),
@@ -38,9 +35,6 @@ export function loadConfig(argv: string[]): DenpiConfig {
         break;
       case '--system':
         config.extraSystemPrompt = expectValue(argv, ++i, '--system');
-        break;
-      case '--auto':
-        config.autoApprove = true;
         break;
       case '--no-sandbox':
         config.sandbox = false;
@@ -64,7 +58,6 @@ export const usage: string = `
     --url <url>       OpenAI-compatible base URL (default: ${DEFAULT_BASE_URL})
     --model <name>    model name to request (default: "default")
     --system <text>   extra instructions appended to the system prompt
-    --auto            auto-approve shell and file-mutation tools
     --no-sandbox      allow file tools to leave the workspace
     --help            show this help
     --version         show version

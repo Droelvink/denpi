@@ -1,10 +1,39 @@
 import { spawn } from 'node:child_process';
 import type { ToolContext, ToolDefinition } from './types.js';
 import { requireString } from './types.js';
+import { isInsideWorkspace } from './workspace.js';
 
 const IS_WINDOWS = process.platform === 'win32';
 const TIMEOUT_MS = 120_000;
 const MAX_BUFFER = 10 * 1024 * 1024;
+
+/**
+ * Commands that can remove or break things always ask for approval,
+ * even inside the workspace. Best-effort pattern match, not a sandbox.
+ */
+// Only matches in command position (start, or after ; | & ( { or sudo) so that
+// arguments like "npm run format" don't trip it.
+const COMMAND_START = /(?:^|[;|&({]\s*|\bsudo\s+)/.source;
+const FLAGGED_PATTERNS: RegExp[] = [
+  new RegExp(`${COMMAND_START}(rm|del|erase|rmdir|rd|remove-item|ri|unlink)\\b`, 'i'),
+  new RegExp(`${COMMAND_START}(format|mkfs\\S*|diskpart|fdisk|dd)\\b`, 'i'),
+  new RegExp(`${COMMAND_START}(shutdown|reboot|halt|poweroff|stop-computer|restart-computer)\\b`, 'i'),
+  new RegExp(`${COMMAND_START}(taskkill|kill|pkill|killall|stop-process)\\b`, 'i'),
+  /\breg(\.exe)?\s+delete\b/i,
+  /\bgit\s+(reset\s+--hard|clean\b|checkout\s+--|restore\b|push\s+[^;|&]*(--force|-f)\b)/i,
+];
+
+export function isFlaggedCommand(command: string): boolean {
+  return FLAGGED_PATTERNS.some((pattern) => pattern.test(command));
+}
+
+/** Best-effort scan for absolute paths in the command that point outside the workspace. */
+export function referencesOutsidePath(command: string, cwd: string): boolean {
+  const candidates = IS_WINDOWS
+    ? (command.match(/(?:[A-Za-z]:[\\/]|\\\\)[^\s"'`;|&)]*/g) ?? [])
+    : (command.match(/(?:^|[\s"'=(])\/[^\s"'`;|&)]*/g) ?? []).map((match) => match.replace(/^[\s"'=(]/, ''));
+  return candidates.some((path) => !isInsideWorkspace(cwd, path));
+}
 
 export const shellTool: ToolDefinition = {
   name: 'shell',
@@ -18,7 +47,11 @@ export const shellTool: ToolDefinition = {
     },
     required: ['command'],
   },
-  requiresApproval: true,
+
+  needsApproval(args: Record<string, unknown>, context: ToolContext): boolean {
+    const command = typeof args['command'] === 'string' ? args['command'] : '';
+    return isFlaggedCommand(command) || referencesOutsidePath(command, context.cwd);
+  },
 
   summarize(args: Record<string, unknown>): string {
     return typeof args['command'] === 'string' ? args['command'] : '(invalid command)';

@@ -15,8 +15,12 @@ export interface ToolDefinition {
   description: string;
   /** JSON Schema for the arguments object. */
   parameters: Record<string, unknown>;
-  /** When true, the user is asked before the tool runs (unless --auto). */
-  requiresApproval: boolean;
+  /**
+   * Decides per call whether the user must approve before it runs.
+   * Convention: calls that stay inside the workspace run freely; calls that
+   * leave it — and flagged (destructive) shell commands — ask first.
+   */
+  needsApproval(args: Record<string, unknown>, context: ToolContext): boolean;
   /** Short one-line description of a specific call, shown in the UI. */
   summarize(args: Record<string, unknown>): string;
   /** Optional preview (e.g. a diff) shown in the approval prompt before the call runs. */

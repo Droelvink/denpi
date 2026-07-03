@@ -2,7 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { diffLines } from './diff.js';
 import type { ToolContext, ToolDefinition } from './types.js';
 import { optionalBoolean, requireString } from './types.js';
-import { resolveWorkspacePath } from './workspace.js';
+import { leavesWorkspace, resolveWorkspacePath } from './workspace.js';
 
 export const editFileTool: ToolDefinition = {
   name: 'edit_file',
@@ -19,7 +19,10 @@ export const editFileTool: ToolDefinition = {
     },
     required: ['path', 'old_text', 'new_text'],
   },
-  requiresApproval: true,
+
+  needsApproval(args: Record<string, unknown>, context: ToolContext): boolean {
+    return typeof args['path'] !== 'string' || leavesWorkspace(context, args['path']);
+  },
 
   summarize(args: Record<string, unknown>): string {
     return typeof args['path'] === 'string' ? args['path'] : '(invalid path)';

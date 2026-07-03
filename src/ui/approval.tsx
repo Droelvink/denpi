@@ -27,9 +27,7 @@ function previewColor(line: string): string | undefined {
 export function ApprovalPrompt({ request }: { request: ApprovalRequest }): React.JSX.Element {
   useInput((input, key) => {
     if (input === 'y') {
-      request.resolve('once');
-    } else if (input === 'a') {
-      request.resolve('always');
+      request.resolve('allow');
     } else if (input === 'n' || key.escape) {
       request.resolve('deny');
     }
@@ -57,7 +55,7 @@ export function ApprovalPrompt({ request }: { request: ApprovalRequest }): React
         <Text color={colors.dim}>… (+{request.preview.split('\n').length - MAX_PREVIEW_DISPLAY_LINES} more lines)</Text>
       )}
       <Text color={colors.dim}>
-        [y] once   [a] always allow {request.call.name} (remembered)   [n] deny
+        [y] allow   [n] deny   · /permissions off skips all prompts this session
       </Text>
     </Box>
   );

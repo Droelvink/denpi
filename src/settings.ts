@@ -8,8 +8,6 @@ const SETTINGS_PATH = join(SETTINGS_DIR, 'settings.json');
 /** Settings that survive between denpi sessions (~/.denpi/settings.json). */
 export interface PersistedSettings {
   model?: string;
-  /** Tools the user chose to always allow, across sessions. */
-  alwaysApproved?: string[];
 }
 
 export function loadSettings(): PersistedSettings {
@@ -22,11 +20,6 @@ export function loadSettings(): PersistedSettings {
     const settings: PersistedSettings = {};
     if (typeof record['model'] === 'string') {
       settings.model = record['model'];
-    }
-    if (Array.isArray(record['alwaysApproved'])) {
-      settings.alwaysApproved = record['alwaysApproved'].filter(
-        (entry): entry is string => typeof entry === 'string',
-      );
     }
     return settings;
   } catch {

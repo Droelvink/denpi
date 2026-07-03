@@ -23,7 +23,10 @@ export const askUserTool: ToolDefinition = {
     },
     required: ['question'],
   },
-  requiresApproval: false,
+
+  needsApproval(): boolean {
+    return false;
+  },
 
   summarize(args: Record<string, unknown>): string {
     return typeof args['question'] === 'string' ? args['question'] : '(invalid question)';

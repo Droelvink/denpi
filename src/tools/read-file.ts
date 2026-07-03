@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import type { ToolContext, ToolDefinition } from './types.js';
 import { optionalNumber, requireString } from './types.js';
-import { resolveWorkspacePath } from './workspace.js';
+import { leavesWorkspace, resolveWorkspacePath } from './workspace.js';
 
 const DEFAULT_LIMIT = 500;
 
@@ -19,7 +19,10 @@ export const readFileTool: ToolDefinition = {
     },
     required: ['path'],
   },
-  requiresApproval: false,
+
+  needsApproval(args: Record<string, unknown>, context: ToolContext): boolean {
+    return typeof args['path'] === 'string' && leavesWorkspace(context, args['path']);
+  },
 
   summarize(args: Record<string, unknown>): string {
     return typeof args['path'] === 'string' ? args['path'] : '(invalid path)';

@@ -20,3 +20,8 @@ export function isInsideWorkspace(cwd: string, absolutePath: string): boolean {
   const relativePath = relative(cwd, absolutePath);
   return relativePath === '' || (!relativePath.startsWith('..') && !isAbsolute(relativePath));
 }
+
+/** True when a tool path (relative or absolute) lands outside the workspace. */
+export function leavesWorkspace(context: ToolContext, path: string): boolean {
+  return !isInsideWorkspace(context.cwd, resolve(context.cwd, path));
+}

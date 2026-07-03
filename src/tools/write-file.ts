@@ -3,7 +3,7 @@ import { dirname } from 'node:path';
 import { diffLines, newFilePreview } from './diff.js';
 import type { ToolContext, ToolDefinition } from './types.js';
 import { requireString } from './types.js';
-import { resolveWorkspacePath } from './workspace.js';
+import { leavesWorkspace, resolveWorkspacePath } from './workspace.js';
 
 export const writeFileTool: ToolDefinition = {
   name: 'write_file',
@@ -16,7 +16,10 @@ export const writeFileTool: ToolDefinition = {
     },
     required: ['path', 'content'],
   },
-  requiresApproval: true,
+
+  needsApproval(args: Record<string, unknown>, context: ToolContext): boolean {
+    return typeof args['path'] !== 'string' || leavesWorkspace(context, args['path']);
+  },
 
   summarize(args: Record<string, unknown>): string {
     return typeof args['path'] === 'string' ? args['path'] : '(invalid path)';

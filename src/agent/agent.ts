@@ -3,7 +3,6 @@ import { describeError } from '../errors.js';
 import { streamChatCompletion } from '../llm/client.js';
 import { extractTextualToolCalls, looksLikeTextualToolCall } from '../llm/textual-tool-calls.js';
 import type { ChatMessage, ToolCall, ToolSchema } from '../llm/types.js';
-import { loadSettings, saveSettings } from '../settings.js';
 import { findTool, toolSchemas } from '../tools/registry.js';
 import { UndoStore } from '../undo.js';
 import type { ToolDefinition } from '../tools/types.js';
@@ -34,7 +33,8 @@ export interface AgentOptions {
 export class Agent {
   private readonly history: ChatMessage[] = [];
   private readonly schemas: ToolSchema[];
-  private readonly alwaysApproved = new Set<string>(loadSettings().alwaysApproved ?? []);
+  /** When true (/permissions off), every tool call runs without asking. */
+  private permissionsBypassed = false;
   readonly undo = new UndoStore();
   private model: string;
 
@@ -100,13 +100,8 @@ export class Agent {
     return { folded: folded.length, kept: tail.length };
   }
 
-  getAlwaysApproved(): string[] {
-    return [...this.alwaysApproved].sort();
-  }
-
-  clearAlwaysApproved(): void {
-    this.alwaysApproved.clear();
-    saveSettings({ alwaysApproved: [] });
+  setPermissionsBypassed(bypassed: boolean): void {
+    this.permissionsBypassed = bypassed;
   }
 
   async run(userText: string, emit: EmitFn, signal: AbortSignal): Promise<void> {
@@ -238,7 +233,13 @@ export class Agent {
       onProgress: (text: string): void => emit({ type: 'tool-progress', call: info, text }),
     };
 
-    if (tool.requiresApproval && !this.options.config.autoApprove && !this.alwaysApproved.has(tool.name)) {
+    let needsApproval = true;
+    try {
+      needsApproval = tool.needsApproval(args, context);
+    } catch {
+      // if the check itself fails, err on the side of asking
+    }
+    if (needsApproval && !this.permissionsBypassed) {
       let preview: string | null = null;
       if (tool.preview !== undefined) {
         try {
@@ -251,10 +252,6 @@ export class Agent {
       if (decision === 'deny') {
         emit({ type: 'tool-denied', call: info });
         return 'The user denied this tool call. Ask before retrying, or try another approach.';
-      }
-      if (decision === 'always') {
-        this.alwaysApproved.add(tool.name);
-        saveSettings({ alwaysApproved: [...this.alwaysApproved] });
       }
     }
 

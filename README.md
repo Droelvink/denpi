@@ -39,7 +39,6 @@ denpi [options]
 --url <url>       OpenAI-compatible base URL (default: http://127.0.0.1:8080/v1)
 --model <name>    model name to request (default: last /model choice, else "default")
 --system <text>   extra instructions appended to the system prompt
---auto            auto-approve shell and file-mutation tools
 ```
 
 Inside the session:
@@ -51,7 +50,7 @@ Inside the session:
 | `/model <name|#>` | switch model (remembered across sessions)     |
 | `/thought`        | keep thoughts in the transcript (`on`/`off`); `last` shows the most recent |
 | `/skills`         | list available skills                         |
-| `/approvals`      | show always-allowed tools (`clear` to reset)  |
+| `/permissions`    | show permission mode; `off` runs every tool call without asking (this session), `on` restores |
 | `/undo`           | revert the last file change (repeatable)      |
 | `@file`           | mention a workspace file to attach its content (autocompleted) |
 | `/compact`        | instantly archive older messages out of context (deterministic, no model call); keeps the recent tail verbatim |
@@ -71,12 +70,16 @@ Inside the session:
   `.denpi/skills/<name>/` (workspace wins on collisions). denpi lists them in the
   system prompt; when a task matches, the model reads the playbook first.
 
-Tool calls that mutate things (`shell`, `write_file`, `edit_file`) prompt for approval —
-file changes show a colored diff preview in the prompt: **y** run once, **a** always allow
-that tool (remembered across sessions in `~/.denpi/settings.json`; reset with
-`/approvals clear`), **n** deny. Every write/edit is snapshotted first, so `/undo`
-rolls changes back one at a time. Long-running shell commands stream their last output
-lines live under the activity wave, and code blocks in responses are syntax-highlighted.
+Permissions are simple: tool calls that stay inside the workspace run without asking.
+denpi prompts only when a call reaches outside the workspace (file paths, absolute
+globs, shell commands referencing outside paths) or when a shell command is *flagged*
+as destructive (`rm`/`del`/`Remove-Item`, `format`, `git reset --hard`, `git clean`,
+force-push, shutdown, kill, …) — those always ask, even inside the workspace. File
+changes show a colored diff preview in the prompt: **y** allow, **n** deny.
+`/permissions off` bypasses every prompt for the rest of the session. Every write/edit
+is snapshotted first, so `/undo` rolls changes back one at a time. Long-running shell
+commands stream their last output lines live under the activity wave, and code blocks
+in responses are syntax-highlighted.
 
 File tools are sandboxed to the workspace (the directory denpi was started in):
 paths outside it are rejected. Launch with `--no-sandbox` to lift this. The status

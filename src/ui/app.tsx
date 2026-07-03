@@ -29,7 +29,7 @@ const HELP_LINES: readonly string[] = [
   '/model  list models the server offers · /model <name|#> to switch',
   '/thought  keep thoughts in the transcript · /thought on|off|last',
   '/skills list available skills (.denpi/skills/<name>/SKILL.md)',
-  '/approvals  show always-allowed tools · /approvals clear to reset',
+  '/permissions  show permission mode · /permissions off runs everything without asking (this session)',
   '/undo   revert the last file change made by write_file/edit_file',
   '/compact  instantly archive older messages (no model call), keep the recent tail',
   '/clear  clear the chat and reset the conversation context',
@@ -63,6 +63,7 @@ export function App({ config }: { config: DenpiConfig }): React.JSX.Element {
   const [models, setModels] = useState<string[]>([]);
   const [currentModel, setCurrentModel] = useState(config.model);
   const [thoughtsEnabled, setThoughtsEnabled] = useState(true);
+  const [permissionsOff, setPermissionsOff] = useState(false);
   const thoughtsEnabledRef = useRef(true);
   const lastThoughtRef = useRef<{ text: string; durationMs: number } | null>(null);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
@@ -390,16 +391,25 @@ export function App({ config }: { config: DenpiConfig }): React.JSX.Element {
         }
         return;
       }
-      if (text === '/approvals' || text === '/approvals clear') {
-        if (text === '/approvals clear') {
-          agent.clearAlwaysApproved();
-          pushItem({ kind: 'info', text: 'approval allowlist cleared' });
-        } else {
-          const names = agent.getAlwaysApproved();
+      if (text === '/permissions' || text.startsWith('/permissions ')) {
+        const argument = text.slice('/permissions'.length).trim();
+        if (argument === 'off') {
+          agent.setPermissionsBypassed(true);
+          setPermissionsOff(true);
+          pushItem({ kind: 'info', text: 'permissions off — every tool call runs without asking (this session only)' });
+        } else if (argument === 'on') {
+          agent.setPermissionsBypassed(false);
+          setPermissionsOff(false);
+          pushItem({ kind: 'info', text: 'permissions on — asks outside the workspace and for flagged commands' });
+        } else if (argument === '') {
           pushItem({
             kind: 'info',
-            text: names.length > 0 ? `always allowed: ${names.join(', ')}` : 'no tools are always allowed',
+            text: permissionsOff
+              ? 'permissions off — every tool call runs without asking · /permissions on to restore'
+              : 'permissions on — workspace calls run freely; asks outside the workspace and for flagged (destructive) commands · /permissions off to bypass',
           });
+        } else {
+          pushItem({ kind: 'error', text: 'usage: /permissions [on|off]' });
         }
         return;
       }
@@ -451,7 +461,7 @@ export function App({ config }: { config: DenpiConfig }): React.JSX.Element {
       }
       runTurn(expanded.text);
     },
-    [acceptSuggestion, agent, config, contextSize, exit, handleModelCommand, history, pushItem, runTurn, skills, suggestions, thoughtsEnabled],
+    [acceptSuggestion, agent, config, contextSize, exit, handleModelCommand, history, permissionsOff, pushItem, runTurn, skills, suggestions, thoughtsEnabled],
   );
 
   const displayModel =
@@ -560,6 +570,7 @@ export function App({ config }: { config: DenpiConfig }): React.JSX.Element {
           status={serverStatus}
           tokenStats={tokenStats}
           contextSize={contextSize}
+          permissionsOff={permissionsOff}
         />
       </Box>
     </Box>
@@ -583,12 +594,14 @@ function StatusLine({
   status,
   tokenStats,
   contextSize,
+  permissionsOff,
 }: {
   config: DenpiConfig;
   displayModel: string;
   status: 'checking' | 'online' | 'offline';
   tokenStats: { contextTokens: number; tokensPerSecond: number | null } | null;
   contextSize: number | null;
+  permissionsOff: boolean;
 }): React.JSX.Element {
   if (status === 'offline') {
     return (
@@ -616,7 +629,7 @@ function StatusLine({
       ) : (
         ''
       )}
-      {config.autoApprove ? ' · auto-approve' : ''}
+      {permissionsOff ? ' · permissions off' : ''}
       {config.sandbox ? '' : ' · sandbox off'}
     </Text>
   );

@@ -17,7 +17,11 @@ export const globTool: ToolDefinition = {
     },
     required: ['pattern'],
   },
-  requiresApproval: false,
+
+  needsApproval(args: Record<string, unknown>): boolean {
+    // Absolute patterns can look outside the workspace; relative ones cannot.
+    return typeof args['pattern'] === 'string' && isAbsolute(args['pattern']);
+  },
 
   summarize(args: Record<string, unknown>): string {
     return typeof args['pattern'] === 'string' ? args['pattern'] : '(invalid pattern)';

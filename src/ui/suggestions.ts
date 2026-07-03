@@ -18,7 +18,7 @@ const COMMANDS: CommandSpec[] = [
   { name: '/model', hint: 'list or switch models', takesArgument: true },
   { name: '/thought', hint: 'show or hide the thinking stream', takesArgument: true },
   { name: '/skills', hint: 'list available skills', takesArgument: false },
-  { name: '/approvals', hint: 'show or clear always-allowed tools', takesArgument: true },
+  { name: '/permissions', hint: 'show permission mode · off = run everything without asking', takesArgument: true },
   { name: '/undo', hint: 'revert the last file change', takesArgument: false },
   { name: '/compact', hint: 'archive older messages · instant, no model call', takesArgument: false },
   { name: '/clear', hint: 'clear the chat and reset the context', takesArgument: false },
@@ -74,10 +74,10 @@ export function getSuggestions(input: string, models: string[], files: string[])
       .filter((option) => option.startsWith(argument) && option !== argument)
       .map((option) => ({ value: `/thought ${option}`, label: option }));
   }
-  if (command === '/approvals') {
-    return ['clear']
+  if (command === '/permissions') {
+    return ['off', 'on']
       .filter((option) => option.startsWith(argument) && option !== argument)
-      .map((option) => ({ value: `/approvals ${option}`, label: option }));
+      .map((option) => ({ value: `/permissions ${option}`, label: option }));
   }
   return [];
 }

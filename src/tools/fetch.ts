@@ -14,7 +14,10 @@ export const fetchTool: ToolDefinition = {
     },
     required: ['url'],
   },
-  requiresApproval: false,
+
+  needsApproval(): boolean {
+    return false;
+  },
 
   summarize(args: Record<string, unknown>): string {
     return typeof args['url'] === 'string' ? args['url'] : '(invalid url)';

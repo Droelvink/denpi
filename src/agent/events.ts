@@ -20,7 +20,7 @@ export type AgentEvent =
 
 export type EmitFn = (event: AgentEvent) => void;
 
-export type ApprovalDecision = 'once' | 'always' | 'deny';
+export type ApprovalDecision = 'allow' | 'deny';
 
 export type ApprovalFn = (call: ToolCallInfo, preview: string | null) => Promise<ApprovalDecision>;
 
