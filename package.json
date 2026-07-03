@@ -1,0 +1,33 @@
+{
+  "name": "denpi",
+  "version": "0.1.0",
+  "description": "A calm little terminal agent tuned to llama.cpp",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "denpi": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.tsx",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "dependencies": {
+    "fast-glob": "^3.3.2",
+    "ink": "^5.2.0",
+    "react": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.12",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "main": "index.js",
+  "keywords": [],
+  "author": ""
+}
