@@ -9,6 +9,7 @@ export type TranscriptItem =
   | { kind: 'assistant'; text: string }
   | { kind: 'tool'; name: string; summary: string; output: string; isError: boolean; durationMs: number }
   | { kind: 'tool-denied'; name: string; summary: string }
+  | { kind: 'btw'; text: string }
   | { kind: 'thought'; text: string; durationMs: number }
   | { kind: 'info'; text: string }
   | { kind: 'error'; text: string };
@@ -56,6 +57,16 @@ export function TranscriptLine({ item }: { item: TranscriptItem }): React.JSX.El
           <Text color={colors.dim}>
             {glyphs.tool} {item.name} · {oneLine(item.summary)} — <Text color={colors.error}>denied</Text>
           </Text>
+        </Box>
+      );
+
+    case 'btw':
+      return (
+        <Box marginTop={1} flexDirection="row">
+          <Text color={colors.dim}>{glyphs.info} </Text>
+          <Box flexGrow={1}>
+            <Markdown text={item.text} />
+          </Box>
         </Box>
       );
 

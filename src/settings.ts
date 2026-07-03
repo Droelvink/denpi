@@ -8,6 +8,8 @@ const SETTINGS_PATH = join(SETTINGS_DIR, 'settings.json');
 /** Settings that survive between denpi sessions (~/.denpi/settings.json). */
 export interface PersistedSettings {
   model?: string;
+  /** Base URL of a SearXNG instance for the web_search tool. */
+  searxngUrl?: string;
 }
 
 export function loadSettings(): PersistedSettings {
@@ -20,6 +22,9 @@ export function loadSettings(): PersistedSettings {
     const settings: PersistedSettings = {};
     if (typeof record['model'] === 'string') {
       settings.model = record['model'];
+    }
+    if (typeof record['searxngUrl'] === 'string') {
+      settings.searxngUrl = record['searxngUrl'];
     }
     return settings;
   } catch {

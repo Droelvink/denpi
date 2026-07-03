@@ -1,7 +1,7 @@
 # ▂▃▅▇ denpi
 
 A calm little terminal agent tuned to your local llama.cpp. Streams responses, calls tools
-(shell, file read/write/edit, glob, grep, web fetch), asks before doing anything mutating,
+(shell, file read/write/edit, glob, grep, web fetch, web search), asks before doing anything mutating,
 and can ask *you* clarifying questions (`ask_user`) when a task is ambiguous — answer
 free-form, pick a suggested option with ↑/↓, or (when the model marks the question
 multi-select) toggle several with space before sending.
@@ -39,6 +39,7 @@ denpi [options]
 --url <url>       OpenAI-compatible base URL (default: http://127.0.0.1:8080/v1)
 --model <name>    model name to request (default: last /model choice, else "default")
 --system <text>   extra instructions appended to the system prompt
+--searxng <url>   SearXNG base URL for the web_search tool
 ```
 
 Inside the session:
@@ -48,18 +49,34 @@ Inside the session:
 | `/help`           | list commands and tools                       |
 | `/model`          | list models the server offers                 |
 | `/model <name|#>` | switch model (remembered across sessions)     |
+| `/searxng [url|off]` | show/set the SearXNG URL for `web_search` (remembered), `off` disables |
+| `/btw <question>` | quick side question, even while denpi is working — sees the whole conversation but uses no tools and leaves no trace in context |
 | `/thought`        | keep thoughts in the transcript (`on`/`off`); `last` shows the most recent |
 | `/skills`         | list available skills                         |
 | `/permissions`    | show permission mode; `off` runs every tool call without asking (this session), `on` restores |
+| `/stop`           | stop the running turn (also `esc` or `ctrl+c`) |
 | `/undo`           | revert the last file change (repeatable)      |
 | `@file`           | mention a workspace file to attach its content (autocompleted) |
 | `/compact`        | instantly archive older messages out of context (deterministic, no model call); keeps the recent tail verbatim |
 | `/clear`          | clear the chat and reset the context          |
 | `/exit`           | leave denpi                                   |
-| `esc`             | cancel the running turn                       |
+| `esc` / `ctrl+c`  | stop the running turn (`ctrl+c` when idle: clear input, or exit if empty) |
+| *typing while denpi works* | sends a message the model sees at its next step — steer without stopping |
 | `tab` / `↑` `↓`   | autocomplete commands and their arguments     |
 | `↑` `↓`           | browse input history (when no suggestions)    |
 | `shift+enter`     | newline (also alt+enter, ctrl+j, trailing `\`)|
+
+## Web search
+
+The `web_search` tool talks to a [SearXNG](https://docs.searxng.org/) instance you point it
+at — `/searxng <url>` in-session (persisted to `~/.denpi/settings.json`), or `--searxng <url>` /
+`DENPI_SEARXNG` to override per launch. Pasting the search page URL is fine — a trailing
+`/search` is stripped. The instance must allow the JSON API: its `settings.yml` needs
+`json` listed under `search.formats`, and its bot-detection limiter must not block
+non-browser clients — most public instances do (they answer HTTP 429), so a self-hosted
+instance is the reliable choice. Until a URL is configured the tool reports itself as
+unavailable. Searching returns titles, URLs and snippets; the model follows up with
+`fetch` to read a result.
 
 ## Project instructions & skills
 

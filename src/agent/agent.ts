@@ -37,16 +37,101 @@ export class Agent {
   private permissionsBypassed = false;
   readonly undo = new UndoStore();
   private model: string;
+  private searxngUrl: string | null;
+  /** Messages typed while a turn is running, waiting to enter the conversation. */
+  private readonly pendingInjections: string[] = [];
 
   constructor(private readonly options: AgentOptions) {
     this.history.push({ role: 'system', content: buildSystemPrompt(options.config) });
     this.schemas = toolSchemas(options.tools);
     this.model = options.config.model;
+    this.searxngUrl = options.config.searxngUrl;
   }
 
   /** Switches the model requested from the server for subsequent turns. */
   setModel(model: string): void {
     this.model = model;
+  }
+
+  /** Points web_search at a (new) SearXNG instance for subsequent tool calls. */
+  setSearxngUrl(url: string | null): void {
+    this.searxngUrl = url;
+  }
+
+  /**
+   * Queues a user message typed while a turn is running. It is woven into the
+   * conversation at the next step boundary (after the current completion or
+   * tool call), so the model sees it before it continues.
+   */
+  inject(text: string): void {
+    this.pendingInjections.push(text);
+  }
+
+  private drainInjections(): void {
+    for (const text of this.pendingInjections.splice(0)) {
+      this.history.push({ role: 'user', content: text });
+    }
+  }
+
+  /**
+   * Answers a quick side question (/btw) over the current conversation without
+   * becoming part of it: one completion, no tools, history untouched.
+   */
+  async sideQuestion(
+    question: string,
+    onDelta: (text: string) => void,
+    onReasoning: (text: string) => void,
+    signal: AbortSignal,
+  ): Promise<string> {
+    const result = await streamChatCompletion({
+      baseUrl: this.options.config.baseUrl,
+      model: this.model,
+      messages: [
+        ...this.completedHistory(),
+        {
+          role: 'user',
+          content:
+            '(side question — answer briefly from the conversation so far, without tools; ' +
+            `this exchange is not part of the task) ${question}`,
+        },
+      ],
+      tools: [],
+      signal,
+      onContent: onDelta,
+      onReasoning,
+    });
+    return result.content;
+  }
+
+  /**
+   * Snapshot of the history safe to send while a turn is mid-flight: a
+   * trailing tool-call group whose results are not all in yet is dropped,
+   * since chat templates reject unanswered tool calls.
+   */
+  private completedHistory(): ChatMessage[] {
+    const messages: ChatMessage[] = [];
+    let group: ChatMessage[] = [];
+    let expectedReplies = 0;
+    for (const message of this.history) {
+      if (expectedReplies > 0) {
+        group.push(message);
+        if (message.role === 'tool') {
+          expectedReplies--;
+        }
+        if (expectedReplies === 0) {
+          messages.push(...group);
+          group = [];
+        }
+        continue;
+      }
+      if (message.role === 'assistant' && message.tool_calls !== undefined && message.tool_calls.length > 0) {
+        group = [message];
+        expectedReplies = message.tool_calls.length;
+        continue;
+      }
+      messages.push(message);
+    }
+    return messages;
   }
 
   reset(): void {
@@ -110,6 +195,7 @@ export class Agent {
     let partialContent = '';
     try {
       for (let step = 0; step < MAX_STEPS; step++) {
+        this.drainInjections();
         partialContent = '';
         let reasoningStartedAt = 0;
 
@@ -177,6 +263,10 @@ export class Agent {
         }
 
         if (toolCalls.length === 0) {
+          if (this.pendingInjections.length > 0) {
+            // The user sent a message mid-turn — keep going so the model answers it.
+            continue;
+          }
           return;
         }
         for (const prepared of toolCalls) {
@@ -192,6 +282,9 @@ export class Agent {
         return;
       }
       emit({ type: 'error', message: describeError(error) });
+    } finally {
+      // Anything still queued belongs to this turn; don't leak it into the next.
+      this.pendingInjections.length = 0;
     }
   }
 
@@ -228,6 +321,7 @@ export class Agent {
     const context = {
       cwd: this.options.config.cwd,
       sandbox: this.options.config.sandbox,
+      searxngUrl: this.searxngUrl,
       askUser: this.options.requestQuestion,
       recordUndo: (path: string, previousContent: string | null): void => this.undo.record(path, previousContent),
       onProgress: (text: string): void => emit({ type: 'tool-progress', call: info, text }),

@@ -5,8 +5,10 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Agent } from '../agent/agent.js';
 import type { AgentEvent, ApprovalDecision, ToolCallInfo } from '../agent/events.js';
 import type { DenpiConfig } from '../config.js';
+import { normalizeSearxngUrl } from '../config.js';
 import { loadProjectInstructions } from '../agent/system-prompt.js';
 import { appendHistory, loadHistory } from '../history.js';
+import { describeError } from '../errors.js';
 import { fetchContextSize, fetchModelIds, shortModelName } from '../llm/client.js';
 import { saveSettings } from '../settings.js';
 import { discoverSkills } from '../skills.js';
@@ -27,9 +29,12 @@ import { TranscriptLine } from './transcript.js';
 const HELP_LINES: readonly string[] = [
   '/help   show this help',
   '/model  list models the server offers · /model <name|#> to switch',
+  '/btw <q>  quick side question, even mid-turn — sees the conversation, no tools, leaves no trace in context',
+  '/searxng  show the SearXNG URL for web_search · /searxng <url> sets it (remembered), /searxng off disables',
   '/thought  keep thoughts in the transcript · /thought on|off|last',
   '/skills list available skills (.denpi/skills/<name>/SKILL.md)',
   '/permissions  show permission mode · /permissions off runs everything without asking (this session)',
+  '/stop   stop the running turn (also esc or ctrl+c)',
   '/undo   revert the last file change made by write_file/edit_file',
   '/compact  instantly archive older messages (no model call), keep the recent tail',
   '/clear  clear the chat and reset the conversation context',
@@ -38,7 +43,7 @@ const HELP_LINES: readonly string[] = [
   '@file   mention a workspace file to attach its content (autocompleted)',
   '↑/↓     browse input history (when no suggestion list is open)',
   'newline shift+enter, alt+enter, ctrl+j, or end a line with \\ — pasting keeps newlines',
-  'esc     cancel a running turn',
+  'esc     stop a running turn (also ctrl+c or /stop) — typing while denpi works steers it mid-turn',
   `tools   ${allTools.map((tool) => tool.name).join(', ')}`,
 ];
 
@@ -63,8 +68,13 @@ export function App({ config }: { config: DenpiConfig }): React.JSX.Element {
   const [models, setModels] = useState<string[]>([]);
   const [currentModel, setCurrentModel] = useState(config.model);
   const [thoughtsEnabled, setThoughtsEnabled] = useState(true);
+  const [searxngUrl, setSearxngUrl] = useState(config.searxngUrl);
   const [permissionsOff, setPermissionsOff] = useState(false);
   const thoughtsEnabledRef = useRef(true);
+  /** A /btw side question runs independently of the main turn, with its own abort. */
+  const [sideBusy, setSideBusy] = useState(false);
+  const [sideStreamText, setSideStreamText] = useState('');
+  const sideAbortRef = useRef<AbortController | null>(null);
   const lastThoughtRef = useRef<{ text: string; durationMs: number } | null>(null);
   const [suggestionIndex, setSuggestionIndex] = useState(0);
   const [historyIndex, setHistoryIndex] = useState<number | null>(null);
@@ -282,6 +292,52 @@ export function App({ config }: { config: DenpiConfig }): React.JSX.Element {
     [agent, handleEvent],
   );
 
+  const runSideQuestion = useCallback(
+    (question: string): void => {
+      const controller = new AbortController();
+      sideAbortRef.current = controller;
+      setSideBusy(true);
+      pushItem({ kind: 'info', text: `btw: ${question}` });
+      void agent
+        .sideQuestion(
+          question,
+          (delta: string): void => setSideStreamText((previous) => previous + delta),
+          (): void => {}, // side reasoning is not shown — it would interleave with the main turn's
+          controller.signal,
+        )
+        .then((answer: string): void => {
+          pushItem({ kind: 'btw', text: answer.length > 0 ? answer : '(no answer)' });
+        })
+        .catch((error: unknown): void => {
+          if (controller.signal.aborted) {
+            pushItem({ kind: 'info', text: 'side question cancelled' });
+          } else {
+            pushItem({ kind: 'error', text: describeError(error) });
+          }
+        })
+        .finally((): void => {
+          setSideBusy(false);
+          setSideStreamText('');
+          sideAbortRef.current = null;
+        });
+    },
+    [agent, pushItem],
+  );
+
+  /** Aborts the main turn and/or a running side question; false when nothing was running. */
+  const stopEverything = useCallback((): boolean => {
+    let stopped = false;
+    if (abortRef.current !== null) {
+      abortRef.current.abort();
+      stopped = true;
+    }
+    if (sideAbortRef.current !== null) {
+      sideAbortRef.current.abort();
+      stopped = true;
+    }
+    return stopped;
+  }, []);
+
   const switchModel = useCallback(
     (id: string): void => {
       agent.setModel(id);
@@ -343,6 +399,39 @@ export function App({ config }: { config: DenpiConfig }): React.JSX.Element {
         history.push(text);
         appendHistory(text);
       }
+      if (text === '/stop') {
+        if (!stopEverything()) {
+          pushItem({ kind: 'info', text: 'nothing is running' });
+        }
+        return;
+      }
+      if (text === '/btw' || text.startsWith('/btw ')) {
+        const question = text.slice('/btw'.length).trim();
+        if (question.length === 0) {
+          pushItem({ kind: 'error', text: 'usage: /btw <question>' });
+          return;
+        }
+        if (sideBusy) {
+          pushItem({ kind: 'error', text: 'a side question is already running — /stop cancels it' });
+          return;
+        }
+        runSideQuestion(question);
+        return;
+      }
+      if (busy) {
+        // A message typed mid-turn: show it and weave it into the running conversation.
+        if (text.startsWith('/')) {
+          pushItem({ kind: 'error', text: 'commands are unavailable while denpi is working — /stop to interrupt' });
+          return;
+        }
+        pushItem({ kind: 'user', text });
+        const expanded = expandMentions(text, config.cwd);
+        if (expanded.attached.length > 0) {
+          pushItem({ kind: 'info', text: `attached: ${expanded.attached.join(', ')}` });
+        }
+        agent.inject(expanded.text);
+        return;
+      }
       if (text === '/exit' || text === '/quit') {
         exit();
         return;
@@ -355,6 +444,36 @@ export function App({ config }: { config: DenpiConfig }): React.JSX.Element {
       }
       if (text === '/model' || text.startsWith('/model ')) {
         handleModelCommand(text.slice('/model'.length).trim());
+        return;
+      }
+      if (text === '/searxng' || text.startsWith('/searxng ')) {
+        const argument = text.slice('/searxng'.length).trim();
+        if (argument === '') {
+          pushItem({
+            kind: 'info',
+            text:
+              searxngUrl === null
+                ? 'web search off — /searxng <url> points it at a SearXNG instance (its settings.yml must allow the json format)'
+                : `web search via ${searxngUrl} · /searxng <url> to change, /searxng off to disable`,
+          });
+          return;
+        }
+        if (argument === 'off') {
+          agent.setSearxngUrl(null);
+          setSearxngUrl(null);
+          saveSettings({ searxngUrl: undefined });
+          pushItem({ kind: 'info', text: 'web search off' });
+          return;
+        }
+        const normalized = normalizeSearxngUrl(argument);
+        if (normalized === null) {
+          pushItem({ kind: 'error', text: 'usage: /searxng <http(s) url> · /searxng off' });
+          return;
+        }
+        agent.setSearxngUrl(normalized);
+        setSearxngUrl(normalized);
+        saveSettings({ searxngUrl: normalized });
+        pushItem({ kind: 'info', text: `web search via ${normalized} · remembered for next time` });
         return;
       }
       if (text === '/thought' || text.startsWith('/thought ')) {
@@ -461,7 +580,7 @@ export function App({ config }: { config: DenpiConfig }): React.JSX.Element {
       }
       runTurn(expanded.text);
     },
-    [acceptSuggestion, agent, config, contextSize, exit, handleModelCommand, history, permissionsOff, pushItem, runTurn, skills, suggestions, thoughtsEnabled],
+    [acceptSuggestion, agent, busy, config, contextSize, exit, handleModelCommand, history, permissionsOff, pushItem, runSideQuestion, runTurn, searxngUrl, sideBusy, skills, stopEverything, suggestions, thoughtsEnabled],
   );
 
   const displayModel =
@@ -471,14 +590,27 @@ export function App({ config }: { config: DenpiConfig }): React.JSX.Element {
         ? shortModelName(models[0])
         : 'default';
 
-  useInput(
-    (_input, key) => {
-      if (key.escape && busy && approval === null && question === null) {
-        abortRef.current?.abort();
+  useInput((char, key) => {
+    const promptOpen = approval !== null || question !== null;
+    if (key.ctrl && char === 'c') {
+      if (promptOpen) {
+        return; // an approval/question prompt is open — answer it instead
       }
-    },
-    { isActive: busy },
-  );
+      if (stopEverything()) {
+        return;
+      }
+      if (input.length > 0) {
+        setInput('');
+        setHistoryIndex(null);
+        return;
+      }
+      exit();
+      return;
+    }
+    if (key.escape && !promptOpen) {
+      stopEverything();
+    }
+  });
 
   const suggestionWindowStart = Math.min(
     Math.max(0, suggestionIndex - 2),
@@ -510,40 +642,52 @@ export function App({ config }: { config: DenpiConfig }): React.JSX.Element {
         </Box>
       )}
 
+      {sideBusy && (
+        <Box marginTop={1}>
+          <Text color={colors.dim}>{glyphs.info} btw · </Text>
+          <Text color={colors.dim} italic>
+            {sideStreamText.length > 0 ? tail(sideStreamText) : 'thinking…'}
+          </Text>
+        </Box>
+      )}
+
       <Box marginTop={1} flexDirection="column">
         {approval !== null ? (
           <ApprovalPrompt request={approval} />
         ) : question !== null ? (
           <QuestionPrompt request={question} />
-        ) : busy ? (
-          <Box flexDirection="column">
-            <Activity label={activeTool ?? 'thinking'} />
-            {toolProgress !== null &&
-              toolProgress.split('\n').map((line, index) => (
-                <Text key={index} color={colors.dim}>
-                  {'  '}
-                  {line}
-                </Text>
-              ))}
-          </Box>
         ) : (
-          <MultilineInput
-            value={input}
-            onChange={(value: string): void => {
-              setInput(value);
-              setHistoryIndex(null);
-            }}
-            onSubmit={handleSubmit}
-            placeholder="ask denpi anything"
-            suggestionsOpen={suggestions.length > 0}
-            onSuggestionTab={acceptSuggestion}
-            onSuggestionUp={(): void =>
-              setSuggestionIndex((index) => (index - 1 + suggestions.length) % suggestions.length)
-            }
-            onSuggestionDown={(): void => setSuggestionIndex((index) => (index + 1) % suggestions.length)}
-            onHistoryUp={(): void => recallHistory(-1)}
-            onHistoryDown={(): void => recallHistory(1)}
-          />
+          <Box flexDirection="column">
+            {busy && (
+              <Box flexDirection="column">
+                <Activity label={activeTool ?? 'thinking'} />
+                {toolProgress !== null &&
+                  toolProgress.split('\n').map((line, index) => (
+                    <Text key={index} color={colors.dim}>
+                      {'  '}
+                      {line}
+                    </Text>
+                  ))}
+              </Box>
+            )}
+            <MultilineInput
+              value={input}
+              onChange={(value: string): void => {
+                setInput(value);
+                setHistoryIndex(null);
+              }}
+              onSubmit={handleSubmit}
+              placeholder={busy ? 'type to steer denpi · /stop, esc or ctrl+c to stop' : 'ask denpi anything'}
+              suggestionsOpen={suggestions.length > 0}
+              onSuggestionTab={acceptSuggestion}
+              onSuggestionUp={(): void =>
+                setSuggestionIndex((index) => (index - 1 + suggestions.length) % suggestions.length)
+              }
+              onSuggestionDown={(): void => setSuggestionIndex((index) => (index + 1) % suggestions.length)}
+              onHistoryUp={(): void => recallHistory(-1)}
+              onHistoryDown={(): void => recallHistory(1)}
+            />
+          </Box>
         )}
         {!busy && approval === null && visibleSuggestions.length > 0 && (
           <Box flexDirection="column">

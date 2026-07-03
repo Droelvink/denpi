@@ -2,6 +2,8 @@ export interface ToolContext {
   cwd: string;
   /** When true (default), file tools may not leave the workspace. */
   sandbox: boolean;
+  /** Base URL of a SearXNG instance for web_search, or null when unconfigured. */
+  searxngUrl: string | null;
   /** Asks the user a question and resolves with their answer. */
   askUser: (question: string, options: string[], multiSelect: boolean) => Promise<string>;
   /** Snapshots a file's prior state (null = did not exist) so /undo can restore it. */

@@ -16,9 +16,12 @@ interface CommandSpec {
 const COMMANDS: CommandSpec[] = [
   { name: '/help', hint: 'show commands', takesArgument: false },
   { name: '/model', hint: 'list or switch models', takesArgument: true },
+  { name: '/btw', hint: 'quick side question · not added to the conversation', takesArgument: true },
+  { name: '/searxng', hint: 'show or set the SearXNG URL for web_search · off to disable', takesArgument: true },
   { name: '/thought', hint: 'show or hide the thinking stream', takesArgument: true },
   { name: '/skills', hint: 'list available skills', takesArgument: false },
   { name: '/permissions', hint: 'show permission mode · off = run everything without asking', takesArgument: true },
+  { name: '/stop', hint: 'stop the running turn', takesArgument: false },
   { name: '/undo', hint: 'revert the last file change', takesArgument: false },
   { name: '/compact', hint: 'archive older messages · instant, no model call', takesArgument: false },
   { name: '/clear', hint: 'clear the chat and reset the context', takesArgument: false },
@@ -68,6 +71,11 @@ export function getSuggestions(input: string, models: string[], files: string[])
         const label = shortModelName(id);
         return { value: `/model ${id}`, label, hint: label === id ? undefined : id };
       });
+  }
+  if (command === '/searxng') {
+    return ['off']
+      .filter((option) => option.startsWith(argument) && option !== argument)
+      .map((option) => ({ value: `/searxng ${option}`, label: option, hint: 'disable web search' }));
   }
   if (command === '/thought') {
     return ['on', 'off', 'last']

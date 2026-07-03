@@ -21,7 +21,8 @@ try {
   const config = loadConfig(argv);
   // clean screen with the prompt anchored to the bottom of the window
   resetScreen();
-  render(<App config={config} />);
+  // ctrl+c is handled in-app: it stops the running turn instead of exiting
+  render(<App config={config} />, { exitOnCtrlC: false });
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);

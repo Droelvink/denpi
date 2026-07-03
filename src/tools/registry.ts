@@ -7,6 +7,7 @@ import { grepTool } from './grep.js';
 import { readFileTool } from './read-file.js';
 import { shellTool } from './shell.js';
 import type { ToolDefinition } from './types.js';
+import { webSearchTool } from './web-search.js';
 import { writeFileTool } from './write-file.js';
 
 export const allTools: ToolDefinition[] = [
@@ -17,6 +18,7 @@ export const allTools: ToolDefinition[] = [
   globTool,
   grepTool,
   fetchTool,
+  webSearchTool,
   askUserTool,
 ];
 
