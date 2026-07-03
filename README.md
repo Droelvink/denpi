@@ -6,8 +6,6 @@ and can ask *you* clarifying questions (`ask_user`) when a task is ambiguous —
 free-form, pick a suggested option with ↑/↓, or (when the model marks the question
 multi-select) toggle several with space before sending.
 
-*denpa* (電波) — radio wave. denpi tunes into whatever model your GPU is serving.
-
 ## Requirements
 
 - Node.js ≥ 18.17
