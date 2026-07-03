@@ -1,6 +1,6 @@
 import { loadSettings } from './settings.js';
 
-export interface DenpiConfig {
+export interface CloverConfig {
   /** Base URL of the OpenAI-compatible API, e.g. http://127.0.0.1:8080/v1 */
   baseUrl: string;
   /** Model name to request; llama-server serves whatever it loaded, so this is mostly cosmetic. */
@@ -17,14 +17,14 @@ export interface DenpiConfig {
 
 const DEFAULT_BASE_URL = 'http://127.0.0.1:8080/v1';
 
-export function loadConfig(argv: string[]): DenpiConfig {
+export function loadConfig(argv: string[]): CloverConfig {
   const settings = loadSettings();
-  const config: DenpiConfig = {
-    baseUrl: process.env['DENPI_URL'] ?? DEFAULT_BASE_URL,
-    model: process.env['DENPI_MODEL'] ?? settings.model ?? 'default',
+  const config: CloverConfig = {
+    baseUrl: process.env['CLOVER_URL'] ?? DEFAULT_BASE_URL,
+    model: process.env['CLOVER_MODEL'] ?? settings.model ?? 'default',
     sandbox: true,
     extraSystemPrompt: null,
-    searxngUrl: process.env['DENPI_SEARXNG'] ?? settings.searxngUrl ?? null,
+    searxngUrl: process.env['CLOVER_SEARXNG'] ?? settings.searxngUrl ?? null,
     cwd: process.cwd(),
   };
 
@@ -52,7 +52,7 @@ export function loadConfig(argv: string[]): DenpiConfig {
         break;
       }
       default:
-        throw new Error(`Unknown option: ${arg} (see denpi --help)`);
+        throw new Error(`Unknown option: ${arg} (see clover --help)`);
     }
   }
 
@@ -62,10 +62,10 @@ export function loadConfig(argv: string[]): DenpiConfig {
 }
 
 export const usage: string = `
-  ▂▃▅▇ denpi — a calm little terminal agent tuned to llama.cpp
+  ☘ clover — a calm little terminal agent tuned to llama.cpp
 
   usage
-    denpi [options]
+    clover [options]
 
   options
     --url <url>       OpenAI-compatible base URL (default: ${DEFAULT_BASE_URL})
@@ -77,7 +77,7 @@ export const usage: string = `
     --version         show version
 
   environment
-    DENPI_URL, DENPI_MODEL, DENPI_SEARXNG — defaults for --url / --model / --searxng
+    CLOVER_URL, CLOVER_MODEL, CLOVER_SEARXNG — defaults for --url / --model / --searxng
 
   serve a model first, e.g.:
     llama-server -m model.gguf --jinja -ngl 99 -c 16384 --port 8080

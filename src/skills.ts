@@ -11,11 +11,11 @@ export interface SkillInfo {
 
 /**
  * Discovers skills: folders containing a SKILL.md with optional YAML frontmatter
- * (name, description). Global skills live in ~/.denpi/skills/<name>/, workspace
- * skills in <cwd>/.denpi/skills/<name>/ — workspace wins on name collisions.
+ * (name, description). Global skills live in ~/.clover/skills/<name>/, workspace
+ * skills in <cwd>/.clover/skills/<name>/ — workspace wins on name collisions.
  */
 export function discoverSkills(cwd: string): SkillInfo[] {
-  const roots = [join(homedir(), '.denpi', 'skills'), join(cwd, '.denpi', 'skills')];
+  const roots = [join(homedir(), '.clover', 'skills'), join(cwd, '.clover', 'skills')];
   const byName = new Map<string, SkillInfo>();
   for (const root of roots) {
     for (const skill of scanRoot(root)) {

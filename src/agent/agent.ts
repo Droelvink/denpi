@@ -1,4 +1,4 @@
-import type { DenpiConfig } from '../config.js';
+import type { CloverConfig } from '../config.js';
 import { describeError } from '../errors.js';
 import { streamChatCompletion } from '../llm/client.js';
 import { extractTextualToolCalls, looksLikeTextualToolCall } from '../llm/textual-tool-calls.js';
@@ -20,7 +20,7 @@ const REQUEST_LINE_CHARS = 150;
 const MAX_REQUEST_LINES = 12;
 
 export interface AgentOptions {
-  config: DenpiConfig;
+  config: CloverConfig;
   tools: ToolDefinition[];
   requestApproval: ApprovalFn;
   requestQuestion: QuestionFn;

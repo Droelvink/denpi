@@ -1,6 +1,6 @@
 import { Box, Text } from 'ink';
 import React from 'react';
-import { colors, glyphs } from '../theme.js';
+import { brand, colors, glyphs } from '../theme.js';
 import { Markdown } from './markdown.js';
 
 export type TranscriptItem =
@@ -22,8 +22,8 @@ export function TranscriptLine({ item }: { item: TranscriptItem }): React.JSX.El
       return (
         <Box flexDirection="column" marginBottom={1}>
           <Text>
-            <Text color={colors.accent}>▂▃▅▇ </Text>
-            <Text bold>denpi</Text>
+            <Text color={colors.accent}>{brand} </Text>
+            <Text bold color={colors.accent}>clover</Text>
           </Text>
           <Text color={colors.dim}>a small agent tuned to your llama.cpp · /help for commands</Text>
           <Text color={colors.dim}>workspace: {item.cwd}</Text>

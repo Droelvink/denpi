@@ -13,7 +13,7 @@ if (argv.includes('--help') || argv.includes('-h')) {
   process.exit(0);
 }
 if (argv.includes('--version') || argv.includes('-v')) {
-  console.log(`denpi ${VERSION}`);
+  console.log(`clover ${VERSION}`);
   process.exit(0);
 }
 

@@ -1,15 +1,15 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { DenpiConfig } from '../config.js';
+import type { CloverConfig } from '../config.js';
 import type { SkillInfo } from '../skills.js';
 import { discoverSkills } from '../skills.js';
 
 const MAX_INSTRUCTIONS_CHARS = 16_000;
 
-/** Reads DENPI.md from the workspace root, or null when there is none. */
+/** Reads CLOVER.md from the workspace root, or null when there is none. */
 export function loadProjectInstructions(cwd: string): string | null {
   try {
-    const text = readFileSync(join(cwd, 'DENPI.md'), 'utf8').trim();
+    const text = readFileSync(join(cwd, 'CLOVER.md'), 'utf8').trim();
     if (text.length === 0) {
       return null;
     }
@@ -19,11 +19,11 @@ export function loadProjectInstructions(cwd: string): string | null {
   }
 }
 
-export function buildSystemPrompt(config: DenpiConfig): string {
+export function buildSystemPrompt(config: CloverConfig): string {
   const shell = process.platform === 'win32' ? 'PowerShell' : 'bash';
-  const base = `You are denpi, a capable and concise agent running in the user's terminal.
+  const base = `You are clover, a capable and concise agent running in the user's terminal.
 
-Your workspace is the directory denpi was started in:
+Your workspace is the directory clover was started in:
   ${config.cwd}
 
 The workspace is your default context for everything:
@@ -56,7 +56,7 @@ Guidelines:
 
   const instructions = loadProjectInstructions(config.cwd);
   if (instructions !== null) {
-    sections.push(`Project instructions (from DENPI.md in the workspace — follow these):\n\n${instructions}`);
+    sections.push(`Project instructions (from CLOVER.md in the workspace — follow these):\n\n${instructions}`);
   }
 
   if (config.extraSystemPrompt !== null) {

@@ -1,16 +1,19 @@
 /**
- * denpi's visual identity: a calm, mostly-monochrome terminal with
- * electric-cyan "signal" accents and small wave glyphs for activity.
+ * clover's visual identity: a calm, mostly-monochrome terminal with soft
+ * pastel-green accents and a small braille spinner for activity.
  */
 
 export const colors = {
-  accent: 'cyan',
-  user: 'cyan',
+  accent: '#8fe0a8',
+  user: '#8fe0a8',
   tool: 'yellow',
   dim: 'gray',
   error: 'red',
   ok: 'green',
 } as const;
+
+/** Brand mark shown in the banner and usage header. */
+export const brand = '☘';
 
 export const glyphs = {
   prompt: '›',
@@ -21,19 +24,5 @@ export const glyphs = {
   bullet: '•',
 } as const;
 
-/** Frames for the animated signal wave shown while denpi is working. */
-export const waveFrames: readonly string[] = buildWaveFrames();
-
-function buildWaveFrames(): string[] {
-  const ribbon = '▁▁▂▃▅▆▇█▇▆▅▃▂▁';
-  const width = 5;
-  const frames: string[] = [];
-  for (let i = 0; i < ribbon.length; i++) {
-    let frame = '';
-    for (let j = 0; j < width; j++) {
-      frame += ribbon[(i + j) % ribbon.length];
-    }
-    frames.push(frame);
-  }
-  return frames;
-}
+/** Frames for the calm spinner shown while clover is working. */
+export const spinnerFrames: readonly string[] = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];

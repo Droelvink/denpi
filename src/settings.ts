@@ -2,10 +2,10 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-const SETTINGS_DIR = join(homedir(), '.denpi');
+const SETTINGS_DIR = join(homedir(), '.clover');
 const SETTINGS_PATH = join(SETTINGS_DIR, 'settings.json');
 
-/** Settings that survive between denpi sessions (~/.denpi/settings.json). */
+/** Settings that survive between clover sessions (~/.clover/settings.json). */
 export interface PersistedSettings {
   model?: string;
   /** Base URL of a SearXNG instance for the web_search tool. */

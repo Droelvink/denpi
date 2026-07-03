@@ -4,7 +4,7 @@ import { Box, Static, Text, useApp, useInput } from 'ink';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Agent } from '../agent/agent.js';
 import type { AgentEvent, ApprovalDecision, ToolCallInfo } from '../agent/events.js';
-import type { DenpiConfig } from '../config.js';
+import type { CloverConfig } from '../config.js';
 import { normalizeSearxngUrl } from '../config.js';
 import { loadProjectInstructions } from '../agent/system-prompt.js';
 import { appendHistory, loadHistory } from '../history.js';
@@ -32,18 +32,18 @@ const HELP_LINES: readonly string[] = [
   '/btw <q>  quick side question, even mid-turn — sees the conversation, no tools, leaves no trace in context',
   '/searxng  show the SearXNG URL for web_search · /searxng <url> sets it (remembered), /searxng off disables',
   '/thought  keep thoughts in the transcript · /thought on|off|last',
-  '/skills list available skills (.denpi/skills/<name>/SKILL.md)',
+  '/skills list available skills (.clover/skills/<name>/SKILL.md)',
   '/permissions  show permission mode · /permissions off runs everything without asking (this session)',
   '/stop   stop the running turn (also esc or ctrl+c)',
   '/undo   revert the last file change made by write_file/edit_file',
   '/compact  instantly archive older messages (no model call), keep the recent tail',
   '/clear  clear the chat and reset the conversation context',
-  '/exit   leave denpi',
+  '/exit   leave clover',
   'tab     autocomplete commands and arguments (↑/↓ to choose)',
   '@file   mention a workspace file to attach its content (autocompleted)',
   '↑/↓     browse input history (when no suggestion list is open)',
   'newline shift+enter, alt+enter, ctrl+j, or end a line with \\ — pasting keeps newlines',
-  'esc     stop a running turn (also ctrl+c or /stop) — typing while denpi works steers it mid-turn',
+  'esc     stop a running turn (also ctrl+c or /stop) — typing while clover works steers it mid-turn',
   `tools   ${allTools.map((tool) => tool.name).join(', ')}`,
 ];
 
@@ -51,7 +51,7 @@ const REASONING_TAIL = 240;
 const MAX_VISIBLE_SUGGESTIONS = 5;
 const FILE_SCAN_TTL_MS = 5000;
 
-export function App({ config }: { config: DenpiConfig }): React.JSX.Element {
+export function App({ config }: { config: CloverConfig }): React.JSX.Element {
   const { exit } = useApp();
   const skills = useMemo(() => discoverSkills(config.cwd), [config.cwd]);
   const history = useMemo<string[]>(() => loadHistory(), []);
@@ -421,7 +421,7 @@ export function App({ config }: { config: DenpiConfig }): React.JSX.Element {
       if (busy) {
         // A message typed mid-turn: show it and weave it into the running conversation.
         if (text.startsWith('/')) {
-          pushItem({ kind: 'error', text: 'commands are unavailable while denpi is working — /stop to interrupt' });
+          pushItem({ kind: 'error', text: 'commands are unavailable while clover is working — /stop to interrupt' });
           return;
         }
         pushItem({ kind: 'user', text });
@@ -502,7 +502,7 @@ export function App({ config }: { config: DenpiConfig }): React.JSX.Element {
       }
       if (text === '/skills') {
         if (skills.length === 0) {
-          pushItem({ kind: 'info', text: 'no skills found — add .denpi/skills/<name>/SKILL.md here or in your home directory' });
+          pushItem({ kind: 'info', text: 'no skills found — add .clover/skills/<name>/SKILL.md here or in your home directory' });
         } else {
           for (const skill of skills) {
             pushItem({ kind: 'info', text: `${skill.name} — ${skill.description}` });
@@ -677,7 +677,7 @@ export function App({ config }: { config: DenpiConfig }): React.JSX.Element {
                 setHistoryIndex(null);
               }}
               onSubmit={handleSubmit}
-              placeholder={busy ? 'type to steer denpi · /stop, esc or ctrl+c to stop' : 'ask denpi anything'}
+              placeholder={busy ? 'type to steer clover · /stop, esc or ctrl+c to stop' : 'ask clover anything'}
               suggestionsOpen={suggestions.length > 0}
               onSuggestionTab={acceptSuggestion}
               onSuggestionUp={(): void =>
@@ -721,10 +721,10 @@ export function App({ config }: { config: DenpiConfig }): React.JSX.Element {
   );
 }
 
-function initialItems(config: DenpiConfig, skills: ReturnType<typeof discoverSkills>): TranscriptItem[] {
+function initialItems(config: CloverConfig, skills: ReturnType<typeof discoverSkills>): TranscriptItem[] {
   const initial: TranscriptItem[] = [{ kind: 'banner', cwd: config.cwd }];
   if (loadProjectInstructions(config.cwd) !== null) {
-    initial.push({ kind: 'info', text: 'project instructions: DENPI.md' });
+    initial.push({ kind: 'info', text: 'project instructions: CLOVER.md' });
   }
   if (skills.length > 0) {
     initial.push({ kind: 'info', text: `skills: ${skills.map((skill) => skill.name).join(', ')}` });
@@ -740,7 +740,7 @@ function StatusLine({
   contextSize,
   permissionsOff,
 }: {
-  config: DenpiConfig;
+  config: CloverConfig;
   displayModel: string;
   status: 'checking' | 'online' | 'offline';
   tokenStats: { contextTokens: number; tokensPerSecond: number | null } | null;

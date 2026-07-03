@@ -1,12 +1,12 @@
 import { Text } from 'ink';
 import React, { useEffect, useState } from 'react';
-import { colors, waveFrames } from '../theme.js';
+import { colors, spinnerFrames } from '../theme.js';
 
 interface ActivityProps {
   label: string;
 }
 
-/** The animated signal wave shown while denpi is thinking or running a tool. */
+/** The calm spinner shown while clover is thinking or running a tool. */
 export function Activity({ label }: ActivityProps): React.JSX.Element {
   const [frame, setFrame] = useState(0);
 
@@ -17,7 +17,7 @@ export function Activity({ label }: ActivityProps): React.JSX.Element {
 
   return (
     <Text>
-      <Text color={colors.accent}>{waveFrames[frame % waveFrames.length]}</Text>
+      <Text color={colors.accent}>{spinnerFrames[frame % spinnerFrames.length]}</Text>
       <Text color={colors.dim}>
         {' '}
         {label} · esc to cancel

@@ -43,14 +43,14 @@ export const webSearchTool: ToolDefinition = {
 
     if (context.searxngUrl === null) {
       throw new Error(
-        'web search is not configured — the user can point it at a SearXNG instance with /searxng <url> (or --searxng / DENPI_SEARXNG)',
+        'web search is not configured — the user can point it at a SearXNG instance with /searxng <url> (or --searxng / CLOVER_SEARXNG)',
       );
     }
 
     const url = `${context.searxngUrl}/search?q=${encodeURIComponent(query)}&format=json`;
     const response = await fetch(url, {
       signal: AbortSignal.timeout(TIMEOUT_MS),
-      headers: { 'user-agent': 'denpi/0.1', accept: 'application/json' },
+      headers: { 'user-agent': 'clover/0.1', accept: 'application/json' },
     });
     if (response.status === 403) {
       throw new Error(

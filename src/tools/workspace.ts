@@ -10,7 +10,7 @@ export function resolveWorkspacePath(context: ToolContext, path: string): string
   if (context.sandbox && !isInsideWorkspace(context.cwd, absolute)) {
     throw new Error(
       `path escapes the workspace: ${path} — the sandbox limits file access to ${context.cwd}. ` +
-      'If the user really wants this, they must relaunch denpi with --no-sandbox.',
+      'If the user really wants this, they must relaunch clover with --no-sandbox.',
     );
   }
   return absolute;

@@ -1,11 +1,11 @@
 {
-  "name": "denpi",
+  "name": "clover",
   "version": "0.1.0",
   "description": "A calm little terminal agent tuned to llama.cpp",
   "license": "MIT",
   "type": "module",
   "bin": {
-    "denpi": "dist/index.js"
+    "clover": "dist/index.js"
   },
   "scripts": {
     "build": "tsc",

@@ -2,11 +2,11 @@ import { appendFileSync, mkdirSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 
-const HISTORY_DIR = join(homedir(), '.denpi');
+const HISTORY_DIR = join(homedir(), '.clover');
 const HISTORY_PATH = join(HISTORY_DIR, 'history');
 const MAX_ENTRIES = 500;
 
-/** Loads the last inputs from ~/.denpi/history, oldest first. */
+/** Loads the last inputs from ~/.clover/history, oldest first. */
 export function loadHistory(): string[] {
   try {
     const lines = readFileSync(HISTORY_PATH, 'utf8')

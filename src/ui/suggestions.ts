@@ -25,7 +25,7 @@ const COMMANDS: CommandSpec[] = [
   { name: '/undo', hint: 'revert the last file change', takesArgument: false },
   { name: '/compact', hint: 'archive older messages · instant, no model call', takesArgument: false },
   { name: '/clear', hint: 'clear the chat and reset the context', takesArgument: false },
-  { name: '/exit', hint: 'leave denpi', takesArgument: false },
+  { name: '/exit', hint: 'leave clover', takesArgument: false },
 ];
 
 const MAX_FILE_SUGGESTIONS = 25;

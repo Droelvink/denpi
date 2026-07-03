@@ -31,7 +31,7 @@ export const fetchTool: ToolDefinition = {
 
     const response = await fetch(url, {
       signal: AbortSignal.timeout(TIMEOUT_MS),
-      headers: { 'user-agent': 'denpi/0.1', accept: 'text/html, text/plain, application/json;q=0.9, */*;q=0.8' },
+      headers: { 'user-agent': 'clover/0.1', accept: 'text/html, text/plain, application/json;q=0.9, */*;q=0.8' },
     });
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} ${response.statusText}`);
